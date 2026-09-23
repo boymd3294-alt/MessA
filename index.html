@@ -1,61 +1,853 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Messa</title>
-<link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
+
+    <meta
+        name="description"
+        content="Messa – modern közösségi és üzenetküldő alkalmazás"
+    >
+
+    <title>Messa</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="./css/style.css">
 </head>
+
 <body>
-<div id="authView" class="auth">
-  <div class="auth-card">
-    <div class="brand">💬 Messa</div>
-    <p class="muted">Közösség és üzenetküldés egy helyen.</p>
-    <div class="tabs"><button id="loginTab" class="active">Bejelentkezés</button><button id="signupTab">Regisztráció</button></div>
-    <form id="authForm">
-      <div id="usernameField" class="field hidden"><label>Felhasználónév</label><input id="username" autocomplete="username"></div>
-      <div class="field"><label>E-mail</label><input id="email" type="email" required autocomplete="email"></div>
-      <div class="field"><label>Jelszó</label><input id="password" type="password" required minlength="6" autocomplete="current-password"></div>
-      <div id="confirmField" class="field hidden"><label>Jelszó újra</label><input id="confirm" type="password" minlength="6" autocomplete="new-password"></div>
-      <button id="authBtn" class="primary full">Bejelentkezés</button>
-      <div id="authMsg" class="msg hidden"></div>
-    </form>
-  </div>
+
+<!-- =========================================================
+     AUTH SCREEN
+========================================================= -->
+
+<div id="authScreen" class="auth-screen">
+
+    <div class="auth-background"></div>
+
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            <div class="logo-mark">
+                <i class="fa-solid fa-comment-dots"></i>
+            </div>
+
+            <div>
+                <h1>Messa</h1>
+                <span>Connect. Share. Message.</span>
+            </div>
+        </div>
+
+        <div class="auth-tabs">
+
+            <button
+                type="button"
+                id="loginTab"
+                class="auth-tab active"
+            >
+                Bejelentkezés
+            </button>
+
+            <button
+                type="button"
+                id="signupTab"
+                class="auth-tab"
+            >
+                Regisztráció
+            </button>
+
+        </div>
+
+        <form id="authForm">
+
+            <div
+                id="signupFields"
+                class="signup-fields hidden"
+            >
+
+                <div class="input-group">
+
+                    <label for="authUsername">
+                        Felhasználónév
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <i class="fa-regular fa-user"></i>
+
+                        <input
+                            id="authUsername"
+                            type="text"
+                            placeholder="pl. josef123"
+                            autocomplete="username"
+                        >
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="input-group">
+
+                <label for="authEmail">
+                    E-mail cím
+                </label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-regular fa-envelope"></i>
+
+                    <input
+                        id="authEmail"
+                        type="email"
+                        placeholder="email@example.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+            <div class="input-group">
+
+                <label for="authPassword">
+                    Jelszó
+                </label>
+
+                <div class="input-wrapper">
+
+                    <i class="fa-solid fa-lock"></i>
+
+                    <input
+                        id="authPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <button
+                        type="button"
+                        id="togglePassword"
+                        class="password-toggle"
+                        aria-label="Jelszó megjelenítése"
+                    >
+                        <i class="fa-regular fa-eye"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div
+                id="authMessage"
+                class="auth-message"
+            ></div>
+
+            <button
+                type="submit"
+                id="authSubmit"
+                class="primary-button auth-submit"
+            >
+                <span>Bejelentkezés</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+        </form>
+
+        <div class="auth-footer">
+            <span>© 2026 Messa</span>
+        </div>
+
+    </div>
+
 </div>
 
-<div id="appView" class="hidden">
-  <div class="layout">
+
+<!-- =========================================================
+     MAIN APPLICATION
+========================================================= -->
+
+<div
+    id="appShell"
+    class="app-shell hidden"
+>
+
+    <!-- =====================================================
+         DESKTOP SIDEBAR
+    ====================================================== -->
+
     <aside class="sidebar">
-      <div class="brand-small">💬 Messa</div>
-      <nav class="nav">
-        <button data-view="home">🏠 Kezdőlap</button>
-        <button data-view="messages">💬 Üzenetek</button>
-        <button data-view="communities">👥 Közösségek</button>
-        <button data-view="notifications">🔔 Értesítések</button>
-        <button data-view="profile">👤 Profil</button>
-        <button data-view="settings">⚙️ Beállítások</button>
-      </nav>
-      <div class="account">
-        <div class="user-row"><div id="sideAvatar" class="avatar"></div><div><b id="sideName"></b><div class="muted" id="sideEmail"></div></div></div>
-        <button id="logoutBtn" class="secondary full logout">Kijelentkezés</button>
-      </div>
+
+        <div class="sidebar-top">
+
+            <a
+                href="#"
+                class="brand"
+                data-view="home"
+            >
+
+                <div class="brand-icon">
+                    <i class="fa-solid fa-comment-dots"></i>
+                </div>
+
+                <span>Messa</span>
+
+            </a>
+
+        </div>
+
+
+        <!-- MAIN NAVIGATION -->
+
+        <nav class="main-navigation">
+
+            <button
+                type="button"
+                class="nav-item active"
+                data-view="home"
+            >
+                <i class="fa-solid fa-house"></i>
+                <span>Kezdőlap</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="explore"
+            >
+                <i class="fa-solid fa-compass"></i>
+                <span>Felfedezés</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="messages"
+            >
+                <span class="nav-icon-wrapper">
+
+                    <i class="fa-regular fa-comment"></i>
+
+                    <span
+                        id="messageBadge"
+                        class="notification-badge hidden"
+                    >
+                        0
+                    </span>
+
+                </span>
+
+                <span>Üzenetek</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="notifications"
+            >
+
+                <span class="nav-icon-wrapper">
+
+                    <i class="fa-regular fa-bell"></i>
+
+                    <span
+                        id="notificationBadge"
+                        class="notification-badge hidden"
+                    >
+                        0
+                    </span>
+
+                </span>
+
+                <span>Értesítések</span>
+
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="communities"
+            >
+                <i class="fa-solid fa-users"></i>
+                <span>Közösségek</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="profile"
+            >
+                <i class="fa-regular fa-user"></i>
+                <span>Profil</span>
+            </button>
+
+        </nav>
+
+
+        <!-- CREATE POST -->
+
+        <button
+            type="button"
+            id="sidebarCreatePost"
+            class="create-post-button"
+        >
+
+            <i class="fa-solid fa-plus"></i>
+
+            <span>
+                Új bejegyzés
+            </span>
+
+        </button>
+
+
+        <!-- SIDEBAR USER -->
+
+        <div class="sidebar-bottom">
+
+            <button
+                type="button"
+                id="sidebarProfileButton"
+                class="sidebar-user"
+            >
+
+                <div
+                    id="sidebarAvatar"
+                    class="avatar avatar-small"
+                >
+                    ?
+                </div>
+
+                <div class="sidebar-user-info">
+
+                    <strong id="sidebarUsername">
+                        Betöltés...
+                    </strong>
+
+                    <span>
+                        Profil megnyitása
+                    </span>
+
+                </div>
+
+                <i class="fa-solid fa-ellipsis"></i>
+
+            </button>
+
+        </div>
+
     </aside>
-    <main class="content" id="content"></main>
-    <aside class="rightbar">
-      <h3>Fiókod</h3>
-      <div class="user-row"><div id="rightAvatar" class="avatar"></div><div><b id="rightName"></b><div class="muted">Messa</div></div></div>
-      <hr><div class="muted">A Messa a saját, valódi adataidat jeleníti meg.</div>
+
+
+    <!-- =====================================================
+         MOBILE HEADER
+    ====================================================== -->
+
+    <header class="mobile-header">
+
+        <button
+            type="button"
+            id="mobileMenuButton"
+            class="icon-button"
+            aria-label="Menü"
+        >
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <button
+            type="button"
+            class="mobile-logo"
+            data-view="home"
+        >
+
+            <div class="brand-icon">
+                <i class="fa-solid fa-comment-dots"></i>
+            </div>
+
+            <strong>Messa</strong>
+
+        </button>
+
+        <button
+            type="button"
+            id="mobileCreatePost"
+            class="icon-button"
+            aria-label="Új bejegyzés"
+        >
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+    </header>
+
+
+    <!-- =====================================================
+         MOBILE SIDE MENU
+    ====================================================== -->
+
+    <div
+        id="mobileMenuOverlay"
+        class="mobile-menu-overlay hidden"
+    ></div>
+
+    <aside
+        id="mobileMenu"
+        class="mobile-menu"
+    >
+
+        <div class="mobile-menu-header">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    <i class="fa-solid fa-comment-dots"></i>
+                </div>
+
+                <span>Messa</span>
+
+            </div>
+
+            <button
+                type="button"
+                id="closeMobileMenu"
+                class="icon-button"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <nav class="mobile-navigation">
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="home"
+            >
+                <i class="fa-solid fa-house"></i>
+                <span>Kezdőlap</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="explore"
+            >
+                <i class="fa-solid fa-compass"></i>
+                <span>Felfedezés</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="messages"
+            >
+                <i class="fa-regular fa-comment"></i>
+                <span>Üzenetek</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="notifications"
+            >
+                <i class="fa-regular fa-bell"></i>
+                <span>Értesítések</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="communities"
+            >
+                <i class="fa-solid fa-users"></i>
+                <span>Közösségek</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-item"
+                data-view="profile"
+            >
+                <i class="fa-regular fa-user"></i>
+                <span>Profil</span>
+            </button>
+
+        </nav>
+
+        <button
+            type="button"
+            id="mobileLogoutButton"
+            class="mobile-logout"
+        >
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Kijelentkezés
+        </button>
+
     </aside>
-  </div>
-  <nav class="mobile-nav">
-    <button data-view="home">🏠<br>Főoldal</button><button data-view="messages">💬<br>Chat</button><button data-view="communities">👥<br>Közösség</button><button data-view="notifications">🔔<br>Értesítés</button><button data-view="profile">👤<br>Profil</button>
-  </nav>
+
+
+    <!-- =====================================================
+         MAIN CONTENT AREA
+    ====================================================== -->
+
+    <main class="main-area">
+
+        <!-- TOP SEARCH BAR -->
+
+        <div class="topbar">
+
+            <div class="topbar-search">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input
+                    id="globalSearch"
+                    type="search"
+                    placeholder="Keresés a Messán..."
+                    autocomplete="off"
+                >
+
+                <div
+                    id="searchResults"
+                    class="search-results hidden"
+                ></div>
+
+            </div>
+
+            <div class="topbar-actions">
+
+                <button
+                    type="button"
+                    class="icon-button desktop-hide"
+                    data-view="notifications"
+                >
+                    <i class="fa-regular fa-bell"></i>
+                </button>
+
+                <button
+                    type="button"
+                    id="topbarProfile"
+                    class="topbar-profile"
+                    data-view="profile"
+                >
+
+                    <div
+                        id="topbarAvatar"
+                        class="avatar avatar-small"
+                    >
+                        ?
+                    </div>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- PAGE CONTENT -->
+
+        <div
+            id="content"
+            class="content-area"
+        >
+
+            <div class="loading-screen">
+
+                <div class="loading-spinner"></div>
+
+                <span>
+                    Messa betöltése...
+                </span>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         RIGHT SIDEBAR
+    ====================================================== -->
+
+    <aside class="right-sidebar">
+
+        <!-- PEOPLE -->
+
+        <section class="right-card">
+
+            <div class="section-heading">
+
+                <h3>
+                    Emberek
+                </h3>
+
+                <button
+                    type="button"
+                    data-view="explore"
+                    class="text-button"
+                >
+                    Összes
+                </button>
+
+            </div>
+
+            <div
+                id="peopleSuggestions"
+                class="people-list"
+            >
+
+                <div class="mini-loading">
+                    Betöltés...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- COMMUNITIES -->
+
+        <section class="right-card">
+
+            <div class="section-heading">
+
+                <h3>
+                    Közösségek
+                </h3>
+
+                <button
+                    type="button"
+                    data-view="communities"
+                    class="text-button"
+                >
+                    Összes
+                </button>
+
+            </div>
+
+            <div
+                id="communitySuggestions"
+                class="community-mini-list"
+            >
+
+                <div class="mini-loading">
+                    Betöltés...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <div class="right-footer">
+
+            <span>
+                Messa © 2026
+            </span>
+
+            <span>•</span>
+
+            <button
+                type="button"
+                data-view="settings"
+            >
+                Beállítások
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MOBILE BOTTOM NAVIGATION
+    ====================================================== -->
+
+    <nav class="mobile-bottom-nav">
+
+        <button
+            type="button"
+            class="mobile-nav-item active"
+            data-view="home"
+        >
+            <i class="fa-solid fa-house"></i>
+            <span>Kezdőlap</span>
+        </button>
+
+        <button
+            type="button"
+            class="mobile-nav-item"
+            data-view="explore"
+        >
+            <i class="fa-solid fa-compass"></i>
+            <span>Felfedezés</span>
+        </button>
+
+        <button
+            type="button"
+            id="mobileBottomCreate"
+            class="mobile-create-button"
+        >
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <button
+            type="button"
+            class="mobile-nav-item"
+            data-view="messages"
+        >
+
+            <span class="nav-icon-wrapper">
+
+                <i class="fa-regular fa-comment"></i>
+
+                <span
+                    id="mobileMessageBadge"
+                    class="notification-badge hidden"
+                >
+                    0
+                </span>
+
+            </span>
+
+            <span>Üzenetek</span>
+
+        </button>
+
+        <button
+            type="button"
+            class="mobile-nav-item"
+            data-view="profile"
+        >
+            <i class="fa-regular fa-user"></i>
+            <span>Profil</span>
+        </button>
+
+    </nav>
+
 </div>
-<div id="modal" class="modal hidden"></div><div id="toast" class="toast hidden"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/app.js"></script>
+
+
+<!-- =========================================================
+     GLOBAL MODAL
+========================================================= -->
+
+<div
+    id="modalOverlay"
+    class="modal-overlay hidden"
+>
+
+    <div
+        id="modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+    >
+
+        <div
+            id="modalContent"
+            class="modal-content"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     TOAST
+========================================================= -->
+
+<div
+    id="toastContainer"
+    class="toast-container"
+    aria-live="polite"
+></div>
+
+
+<!-- =========================================================
+     SUPABASE
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+></script>
+
+
+<!-- =========================================================
+     APP JS
+========================================================= -->
+
+<script src="./js/app.js"></script>
+
+
+<!-- =========================================================
+     PWA SERVICE WORKER
+========================================================= -->
+
+<script>
+
+if ('serviceWorker' in navigator) {
+
+    window.addEventListener('load', () => {
+
+        navigator.serviceWorker
+            .register('./sw.js')
+            .then(registration => {
+
+                console.log(
+                    'Messa Service Worker:',
+                    registration.scope
+                );
+
+            })
+            .catch(error => {
+
+                console.error(
+                    'Service Worker hiba:',
+                    error
+                );
+
+            });
+
+    });
+
+}
+
+</script>
+
 </body>
 </html>
