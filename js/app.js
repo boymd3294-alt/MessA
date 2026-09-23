@@ -1,3 +1,4 @@
+```javascript
 const SUPABASE_URL='https://gjbycnoxocobfpojbxge.supabase.co';
 const SUPABASE_KEY='sb_publishable_daUq4Mx-LSKZlOoN6PjJxw_tP5WfFJa';
 
@@ -21,8 +22,15 @@ let state={
   profile:null,
   view:'home',
   chatUser:null,
-  subscriptions:[]
+  profileUserId:null,
+  subscriptions:[],
+  realtimeStarted:false
 };
+
+
+/* =========================================================
+   SEGÉDFÜGGVÉNYEK
+========================================================= */
 
 function esc(v=''){
   return String(v).replace(/[&<>'"]/g,c=>({
@@ -31,107 +39,195 @@ function esc(v=''){
     '>':'&gt;',
     "'":'&#39;',
     '"':'&quot;'
-  }[c]))
+  }[c]));
 }
 
+
 function toast(t){
-  $('#toast').textContent=t;
-  $('#toast').classList.remove('hidden');
+
+  const el=$('#toast');
+
+  if(!el)return;
+
+  el.textContent=t;
+  el.classList.remove('hidden');
 
   setTimeout(
-    ()=>$('#toast').classList.add('hidden'),
+    ()=>el.classList.add('hidden'),
     2600
   );
 }
 
+
 function avatar(p,cls='avatar'){
+
   return `
     <div class="${cls}">
       ${
         p?.avatar_url
         ? `<img src="${esc(p.avatar_url)}" alt="">`
-        : esc((p?.username||'?').slice(0,1).toUpperCase())
+        : esc(
+            (p?.username||'?')
+              .slice(0,1)
+              .toUpperCase()
+          )
       }
     </div>
   `;
 }
 
+
 function showAuthMsg(t,ok=false){
+
   $('#authMsg').textContent=t;
-  $('#authMsg').className='msg'+(ok?' ok':'');
+
+  $('#authMsg').className=
+    'msg'+(ok?' ok':'');
+
   $('#authMsg').classList.remove('hidden');
 }
 
-function setAuthMode(signup){
-  $('#loginTab').classList.toggle('active',!signup);
-  $('#signupTab').classList.toggle('active',signup);
 
-  $('#usernameField').classList.toggle('hidden',!signup);
-  $('#confirmField').classList.toggle('hidden',!signup);
+/* =========================================================
+   AUTH
+========================================================= */
+
+function setAuthMode(signup){
+
+  $('#loginTab').classList.toggle(
+    'active',
+    !signup
+  );
+
+  $('#signupTab').classList.toggle(
+    'active',
+    signup
+  );
+
+  $('#usernameField').classList.toggle(
+    'hidden',
+    !signup
+  );
+
+  $('#confirmField').classList.toggle(
+    'hidden',
+    !signup
+  );
 
   $('#username').required=signup;
   $('#confirm').required=signup;
 
-  $('#authBtn').textContent=signup
+  $('#authBtn').textContent=
+    signup
     ? 'Regisztráció'
     : 'Bejelentkezés';
 
   $('#authMsg').classList.add('hidden');
 }
 
-$('#loginTab').onclick=()=>setAuthMode(false);
-$('#signupTab').onclick=()=>setAuthMode(true);
+
+$('#loginTab').onclick=
+  ()=>setAuthMode(false);
+
+
+$('#signupTab').onclick=
+  ()=>setAuthMode(true);
+
 
 $('#authForm').onsubmit=async e=>{
+
   e.preventDefault();
 
-  const email=$('#email').value.trim();
-  const password=$('#password').value;
-  const signup=$('#signupTab').classList.contains('active');
+  const email=
+    $('#email').value.trim();
 
-  if(signup && password!==$('#confirm').value){
-    showAuthMsg('A két jelszó nem egyezik.');
+  const password=
+    $('#password').value;
+
+  const signup=
+    $('#signupTab')
+      .classList
+      .contains('active');
+
+
+  if(
+    signup &&
+    password!==$('#confirm').value
+  ){
+
+    showAuthMsg(
+      'A két jelszó nem egyezik.'
+    );
+
     return;
   }
+
 
   $('#authBtn').disabled=true;
 
   let r;
 
+
   if(signup){
-    const username=$('#username').value.trim();
+
+    const username=
+      $('#username').value.trim();
+
 
     if(!username){
-      showAuthMsg('A felhasználónév kötelező.');
+
+      showAuthMsg(
+        'A felhasználónév kötelező.'
+      );
+
       $('#authBtn').disabled=false;
+
       return;
     }
 
+
     r=await db.auth.signUp({
+
       email,
       password,
+
       options:{
         data:{
           username
         }
       }
+
     });
 
   }else{
+
     r=await db.auth.signInWithPassword({
+
       email,
       password
+
     });
+
   }
+
 
   $('#authBtn').disabled=false;
 
+
   if(r.error){
-    showAuthMsg(r.error.message);
+
+    showAuthMsg(
+      r.error.message
+    );
+
     return;
   }
 
-  if(signup && !r.data.session){
+
+  if(
+    signup &&
+    !r.data.session
+  ){
 
     showAuthMsg(
       'Sikeres regisztráció. Ellenőrizd az e-mail-fiókodat a megerősítő levélhez.',
@@ -147,11 +243,20 @@ $('#authForm').onsubmit=async e=>{
     );
 
   }
+
 };
 
+
 $('#logoutBtn').onclick=async()=>{
+
   await db.auth.signOut();
+
 };
+
+
+/* =========================================================
+   PROFIL
+========================================================= */
 
 async function loadProfile(){
 
@@ -164,7 +269,9 @@ async function loadProfile(){
     .eq('id',state.user.id)
     .maybeSingle();
 
+
   if(error)throw error;
+
 
   if(!data){
 
@@ -172,56 +279,74 @@ async function loadProfile(){
       state.user.user_metadata?.username ||
       state.user.email.split('@')[0];
 
+
     const r=await db
       .from('profiles')
       .insert({
+
         id:state.user.id,
-        username:username.slice(0,30)
+
+        username:
+          username.slice(0,30)
+
       })
       .select()
       .single();
+
 
     if(r.error)throw r.error;
 
     data=r.data;
   }
 
+
   state.profile=data;
 
   updateUserChrome();
 }
 
+
 function updateUserChrome(){
 
   const p=state.profile||{};
 
+
   $('#sideName').textContent=
     p.username||'Felhasználó';
+
 
   $('#sideEmail').textContent=
     state.user?.email||'';
 
+
   $('#rightName').textContent=
     p.username||'Felhasználó';
+
 
   $('#sideAvatar').innerHTML=
     p.avatar_url
     ? `<img src="${esc(p.avatar_url)}">`
     : esc(
         (p.username||'?')
-        .slice(0,1)
-        .toUpperCase()
+          .slice(0,1)
+          .toUpperCase()
       );
+
 
   $('#rightAvatar').innerHTML=
     p.avatar_url
     ? `<img src="${esc(p.avatar_url)}">`
     : esc(
         (p.username||'?')
-        .slice(0,1)
-        .toUpperCase()
+          .slice(0,1)
+          .toUpperCase()
       );
 }
+
+
+/* =========================================================
+   NAVIGÁCIÓ
+========================================================= */
 
 function nav(){
 
@@ -235,48 +360,122 @@ function nav(){
   render();
 }
 
+
 $$('[data-view]').forEach(
   b=>b.onclick=()=>{
-    state.view=b.dataset.view;
+
+    if(b.dataset.view==='profile'){
+
+      state.profileUserId=
+        state.user.id;
+
+    }
+
+    state.view=
+      b.dataset.view;
+
     nav();
+
   }
 );
+
 
 async function render(){
 
   if(!state.user)return;
+
 
   try{
 
     if(state.view==='home')
       return renderHome();
 
+
     if(state.view==='messages')
       return renderMessages();
+
 
     if(state.view==='communities')
       return renderCommunities();
 
+
     if(state.view==='notifications')
       return renderNotifications();
+
 
     if(state.view==='profile')
       return renderProfile();
 
+
     if(state.view==='settings')
       return renderSettings();
+
 
   }catch(e){
 
     console.error(e);
 
     $('#content').innerHTML=`
+
       <div class="panel">
-        <b>Hiba:</b> ${esc(e.message)}
+
+        <b>Hiba:</b>
+
+        ${esc(e.message)}
+
       </div>
+
     `;
+
   }
 }
+
+
+/* =========================================================
+   ÉRTESÍTÉSEK
+========================================================= */
+
+async function createNotification({
+  userId,
+  title,
+  body
+}){
+
+  if(
+    !userId ||
+    userId===state.user.id
+  ){
+
+    return;
+  }
+
+
+  const r=await db
+    .from('notifications')
+    .insert({
+
+      user_id:userId,
+      title,
+      body
+
+    });
+
+
+  if(r.error){
+
+    console.error(
+      'Értesítés létrehozási hiba:',
+      r.error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   KEZDŐLAP / BEJEGYZÉSEK
+========================================================= */
 
 async function renderHome(){
 
@@ -297,17 +496,26 @@ async function renderHome(){
         avatar_url
       )
     `)
-    .order('created_at',{
-      ascending:false
-    })
+    .order(
+      'created_at',
+      {
+        ascending:false
+      }
+    )
     .limit(50);
+
 
   if(error)throw error;
 
+
   let html=`
+
     <div class="page-head">
+
       <h1>Kezdőlap</h1>
+
     </div>
+
 
     <div class="composer">
 
@@ -321,6 +529,7 @@ async function renderHome(){
         ></textarea>
 
       </div>
+
 
       <div class="actions">
 
@@ -337,41 +546,61 @@ async function renderHome(){
 
         </label>
 
+
         <button
           id="postBtn"
           class="primary"
         >
+
           Közzététel
+
         </button>
 
       </div>
 
     </div>
+
   `;
+
 
   if(!posts?.length){
 
     html+=`
+
       <div class="panel empty">
+
         📝 Még nincs bejegyzés.
+
         <br>
+
         <small>
           Az első valódi bejegyzésed itt jelenik meg.
         </small>
+
       </div>
+
     `;
 
   }else{
 
-    for(const p of posts)
-      html+=await postHtml(p);
+    for(const p of posts){
+
+      html+=
+        await postHtml(p);
+
+    }
 
   }
 
+
   $('#content').innerHTML=html;
 
-  $('#postBtn').onclick=createPost;
+
+  $('#postBtn').onclick=
+    createPost;
+
 }
+
 
 async function postHtml(p){
 
@@ -383,108 +612,191 @@ async function postHtml(p){
       id,
       content,
       created_at,
-      profiles:user_id(username)
+      user_id,
+      profiles:user_id(
+        id,
+        username,
+        avatar_url
+      )
     `)
-    .eq('post_id',p.id)
-    .order('created_at',{
-      ascending:true
-    })
+    .eq(
+      'post_id',
+      p.id
+    )
+    .order(
+      'created_at',
+      {
+        ascending:true
+      }
+    )
     .limit(20);
 
-  const liked=await hasLike(p.id);
+
+  const liked=
+    await hasLike(p.id);
+
 
   return `
+
     <article class="post">
+
 
       <div class="post-head">
 
+
         <div class="user-row">
 
-          ${avatar(p.profiles)}
+
+          <button
+            class="profile-avatar-button"
+            data-profile="${p.profiles?.id||p.user_id}"
+          >
+
+            ${avatar(p.profiles)}
+
+          </button>
+
 
           <div>
 
-            <b>
+            <button
+              class="profile-link"
+              data-profile="${p.profiles?.id||p.user_id}"
+            >
+
               ${esc(
                 p.profiles?.username ||
                 'Felhasználó'
               )}
-            </b>
+
+            </button>
+
 
             <div class="muted">
+
               ${new Date(
                 p.created_at
-              ).toLocaleString('hu-HU')}
+              ).toLocaleString(
+                'hu-HU'
+              )}
+
             </div>
 
           </div>
 
+
         </div>
 
+
       </div>
 
+
       <div class="post-body">
+
         ${esc(p.content)}
+
       </div>
+
 
       ${
         p.media_url
+
         ? `
+
           <img
             class="post-media"
             src="${esc(p.media_url)}"
             alt="Feltöltött kép"
           >
+
         `
+
         :''
       }
 
+
       <div class="post-actions">
 
-        <button data-like="${p.id}">
-          ${liked?'❤️':'🤍'} Tetszik
+
+        <button
+          data-like="${p.id}"
+        >
+
+          ${
+            liked
+            ? '❤️'
+            : '🤍'
+          }
+
+          Tetszik
+
         </button>
 
+
         <button>
+
           💬 ${comments?.length||0}
+
         </button>
+
 
       </div>
 
+
       <div>
+
 
         ${
           comments?.map(c=>`
 
             <div class="comment">
 
-              <b>
+
+              <button
+                class="profile-link"
+                data-profile="${c.profiles?.id||c.user_id}"
+              >
+
                 ${esc(
                   c.profiles?.username ||
                   'Felhasználó'
                 )}
-              </b>
+
+              </button>
+
 
               <br>
+
 
               ${esc(c.content)}
 
+
               <br>
 
+
               <small>
+
                 ${new Date(
                   c.created_at
-                ).toLocaleString('hu-HU')}
+                ).toLocaleString(
+                  'hu-HU'
+                )}
+
               </small>
+
 
             </div>
 
           `).join('')||''
+
         }
+
 
       </div>
 
+
       <div class="actions">
+
 
         <input
           id="commentInput-${p.id}"
@@ -492,18 +804,25 @@ async function postHtml(p){
           placeholder="Írj hozzászólást..."
         >
 
+
         <button
           class="secondary"
           data-sendcomment="${p.id}"
         >
+
           Küldés
+
         </button>
+
 
       </div>
 
+
     </article>
+
   `;
 }
+
 
 async function hasLike(postId){
 
@@ -512,17 +831,30 @@ async function hasLike(postId){
   }=await db
     .from('post_likes')
     .select('post_id')
-    .eq('post_id',postId)
-    .eq('user_id',state.user.id)
+    .eq(
+      'post_id',
+      postId
+    )
+    .eq(
+      'user_id',
+      state.user.id
+    )
     .maybeSingle();
+
 
   return !!data;
 }
 
+
 async function createPost(){
 
-  const text=$('#postText').value.trim();
-  const file=$('#postFile').files[0];
+  const text=
+    $('#postText').value.trim();
+
+
+  const file=
+    $('#postFile').files[0];
+
 
   if(!text&&!file){
 
@@ -533,7 +865,9 @@ async function createPost(){
     return;
   }
 
+
   let media_url=null;
+
 
   if(file){
 
@@ -544,6 +878,7 @@ async function createPost(){
         /[^a-zA-Z0-9._-]/g,
         '_'
       )}`;
+
 
     const up=
       await db.storage
@@ -556,12 +891,16 @@ async function createPost(){
           }
         );
 
+
     if(up.error){
 
-      toast(up.error.message);
+      toast(
+        up.error.message
+      );
 
       return;
     }
+
 
     media_url=
       db.storage
@@ -569,99 +908,323 @@ async function createPost(){
         .getPublicUrl(path)
         .data
         .publicUrl;
+
   }
+
 
   const r=
     await db
       .from('posts')
       .insert({
-        user_id:state.user.id,
+
+        user_id:
+          state.user.id,
+
         content:text,
+
         media_url
+
       });
+
 
   if(r.error){
 
-    toast(r.error.message);
+    toast(
+      r.error.message
+    );
 
     return;
   }
 
-  toast('Bejegyzés közzétéve.');
+
+  toast(
+    'Bejegyzés közzétéve.'
+  );
+
 
   renderHome();
+
 }
+
+
+/* =========================================================
+   HOME CLICK KEZELÉS
+========================================================= */
 
 $('#content').addEventListener(
   'click',
   async e=>{
 
-    const like=e.target.closest(
-      '[data-like]'
-    );
+
+    /* =========================
+       PROFIL
+    ========================= */
+
+    const profile=
+      e.target.closest(
+        '[data-profile]'
+      );
+
+
+    if(profile){
+
+      state.profileUserId=
+        profile.dataset.profile;
+
+      state.view='profile';
+
+      nav();
+
+      return;
+    }
+
+
+    /* =========================
+       ÜZENET SZERKESZTÉS
+    ========================= */
+
+    const editMessageButton=
+      e.target.closest(
+        '[data-edit-message]'
+      );
+
+
+    if(editMessageButton){
+
+      await editMessage(
+        editMessageButton.dataset.editMessage
+      );
+
+      return;
+    }
+
+
+    /* =========================
+       ÜZENET TÖRLÉS
+    ========================= */
+
+    const deleteMessageButton=
+      e.target.closest(
+        '[data-delete-message]'
+      );
+
+
+    if(deleteMessageButton){
+
+      await deleteMessage(
+        deleteMessageButton.dataset.deleteMessage
+      );
+
+      return;
+    }
+
+
+    /* =========================
+       LIKE
+    ========================= */
+
+    const like=
+      e.target.closest(
+        '[data-like]'
+      );
+
 
     if(like){
 
-      const id=like.dataset.like;
-      const liked=await hasLike(id);
+      const id=
+        like.dataset.like;
 
-      const r=
-        liked
-        ? await db
+
+      const liked=
+        await hasLike(id);
+
+
+      if(liked){
+
+        const r=
+          await db
             .from('post_likes')
             .delete()
-            .eq('post_id',id)
+            .eq(
+              'post_id',
+              id
+            )
             .eq(
               'user_id',
               state.user.id
-            )
-        : await db
+            );
+
+
+        if(r.error){
+
+          toast(
+            r.error.message
+          );
+
+          return;
+        }
+
+
+      }else{
+
+        const r=
+          await db
             .from('post_likes')
             .insert({
+
               post_id:id,
-              user_id:state.user.id
+
+              user_id:
+                state.user.id
+
             });
 
-      if(r.error)
-        toast(r.error.message);
-      else
-        renderHome();
+
+        if(r.error){
+
+          toast(
+            r.error.message
+          );
+
+          return;
+        }
+
+
+        const {
+          data:post
+        }=await db
+          .from('posts')
+          .select(
+            'user_id'
+          )
+          .eq(
+            'id',
+            id
+          )
+          .single();
+
+
+        if(post){
+
+          await createNotification({
+
+            userId:
+              post.user_id,
+
+            title:
+              '❤️ Új kedvelés',
+
+            body:
+              `${state.profile.username} kedvelte a bejegyzésedet.`
+
+          });
+
+        }
+
+      }
+
+
+      renderHome();
+
+      return;
     }
+
+
+    /* =========================
+       KOMMENT
+    ========================= */
 
     const send=
       e.target.closest(
         '[data-sendcomment]'
       );
 
+
     if(send){
 
-      const id=send.dataset.sendcomment;
+      const id=
+        send.dataset.sendcomment;
+
 
       const input=
         $(`#commentInput-${id}`);
 
+
       const content=
         input.value.trim();
 
+
       if(!content)return;
+
 
       const r=
         await db
           .from('comments')
           .insert({
+
             post_id:id,
-            user_id:state.user.id,
+
+            user_id:
+              state.user.id,
+
             content
+
           });
 
-      if(r.error)
-        toast(r.error.message);
-      else
-        renderHome();
+
+      if(r.error){
+
+        toast(
+          r.error.message
+        );
+
+        return;
+      }
+
+
+      const {
+        data:post
+      }=await db
+        .from('posts')
+        .select(
+          'user_id'
+        )
+        .eq(
+          'id',
+          id
+        )
+        .single();
+
+
+      if(post){
+
+        await createNotification({
+
+          userId:
+            post.user_id,
+
+          title:
+            '💬 Új hozzászólás',
+
+          body:
+            `${state.profile.username} hozzászólt a bejegyzésedhez.`
+
+        });
+
+      }
+
+
+      renderHome();
+
     }
 
   }
 );
+
+
+/* =========================================================
+   ÜZENETEK
+========================================================= */
 
 async function renderMessages(){
 
@@ -673,21 +1236,31 @@ async function renderMessages(){
     .select(
       'id,username,avatar_url'
     )
-    .neq('id',state.user.id)
+    .neq(
+      'id',
+      state.user.id
+    )
     .order('username')
     .limit(100);
 
+
   if(error)throw error;
+
 
   $('#content').innerHTML=`
 
     <div class="page-head">
+
       <h1>Üzenetek</h1>
+
     </div>
+
 
     <div class="chat-grid">
 
+
       <div class="chat-list">
+
 
         ${
           people?.map(p=>`
@@ -704,52 +1277,85 @@ async function renderMessages(){
               ${avatar(p)}
 
               <span>
+
                 ${esc(p.username)}
+
               </span>
 
             </button>
 
-          `).join('') ||
+          `).join('')
+
+          ||
 
           `
+
             <div class="empty">
-              Még nincs más regisztrált felhasználó.
+
+              Még nincs más regisztrált
+              felhasználó.
+
             </div>
+
           `
         }
 
+
       </div>
+
 
       <div class="chat-window">
 
+
         ${
           state.chatUser
+
           ? await chatHtml(
               state.chatUser
             )
+
           : `
+
             <div class="empty">
-              Válassz egy valódi felhasználót
-              a beszélgetéshez.
+
+              Válassz egy valódi
+              felhasználót a beszélgetéshez.
+
             </div>
+
           `
         }
 
+
       </div>
 
+
     </div>
+
   `;
+
 
   $$('[data-chat]').forEach(
     b=>b.onclick=()=>{
-      state.chatUser=b.dataset.chat;
+
+      state.chatUser=
+        b.dataset.chat;
+
       renderMessages();
+
     }
   );
 
-  if($('#sendMessage'))
-    $('#sendMessage').onclick=sendMessage;
+
+  if($('#sendMessage')){
+
+    $('#sendMessage').onclick=
+      sendMessage;
+
+  }
+
 }
+
 
 async function chatHtml(other){
 
@@ -760,8 +1366,12 @@ async function chatHtml(other){
     .select(
       'id,username,avatar_url'
     )
-    .eq('id',other)
+    .eq(
+      'id',
+      other
+    )
     .single();
+
 
   const {
     data:rows,
@@ -773,375 +1383,528 @@ async function chatHtml(other){
       sender_id,
       receiver_id,
       content,
-      created_at
+      created_at,
+      updated_at
     `)
     .or(
       `and(sender_id.eq.${state.user.id},receiver_id.eq.${other}),and(sender_id.eq.${other},receiver_id.eq.${state.user.id})`
     )
-    .order('created_at',{
-      ascending:true
-    })
+    .order(
+      'created_at',
+      {
+        ascending:true
+      }
+    )
     .limit(200);
 
+
   if(error)throw error;
+
 
   return `
 
     <div class="chat-head">
 
+
       ${avatar(p)}
 
-      ${esc(p.username)}
+
+      <div>
+
+        <b>
+          ${esc(p.username)}
+        </b>
+
+        <div class="muted">
+          Üzenetküldés
+        </div>
+
+      </div>
+
 
     </div>
+
 
     <div class="messages">
 
+
       ${
         rows?.length
-        ? rows.map(m=>`
 
-            <div
-              class="bubble ${
-                m.sender_id===state.user.id
+        ? rows.map(m=>{
+
+            const mine=
+              m.sender_id===
+              state.user.id;
+
+
+            return `
+
+              <div
+                class="message-row ${
+                  mine
                   ? 'mine'
                   : ''
-              }"
-            >
+                }"
+              >
 
-              ${esc(m.content)}
 
-              <small>
-                ${new Date(
-                  m.created_at
-                ).toLocaleTimeString(
-                  'hu-HU',
-                  {
-                    hour:'2-digit',
-                    minute:'2-digit'
+                <div
+                  class="bubble ${
+                    mine
+                    ? 'mine'
+                    : ''
+                  }"
+                >
+
+
+                  <div>
+
+                    ${esc(
+                      m.content
+                    )}
+
+                  </div>
+
+
+                  <small>
+
+                    ${new Date(
+                      m.created_at
+                    ).toLocaleTimeString(
+                      'hu-HU',
+                      {
+                        hour:'2-digit',
+                        minute:'2-digit'
+                      }
+                    )}
+
+
+                    ${
+                      m.updated_at
+                      ? ' · szerkesztve'
+                      : ''
+                    }
+
+                  </small>
+
+
+                  ${
+                    mine
+
+                    ? `
+
+                      <div
+                        class="message-actions"
+                      >
+
+
+                        <button
+                          type="button"
+                          data-edit-message="${m.id}"
+                          title="Üzenet szerkesztése"
+                        >
+                          ✏️
+                        </button>
+
+
+                        <button
+                          type="button"
+                          data-delete-message="${m.id}"
+                          title="Üzenet törlése"
+                        >
+                          🗑️
+                        </button>
+
+
+                      </div>
+
+                    `
+
+                    : ''
+
                   }
-                )}
-              </small>
 
-            </div>
 
-          `).join('')
+                </div>
+
+
+              </div>
+
+            `;
+
+          }).join('')
+
 
         : `
+
           <div class="empty">
+
             Még nincs üzenet.
+
           </div>
+
         `
       }
 
+
     </div>
 
+
     <div class="chat-send">
+
 
       <input
         id="messageInput"
         placeholder="Írj üzenetet..."
       >
 
+
       <button
         id="sendMessage"
         class="primary"
       >
+
         Küldés
+
       </button>
 
+
     </div>
+
   `;
 }
 
+
 async function sendMessage(){
 
-  const input=$('#messageInput');
-  const content=input.value.trim();
+  const input=
+    $('#messageInput');
 
-  if(!content||!state.chatUser)
+
+  const content=
+    input.value.trim();
+
+
+  if(
+    !content ||
+    !state.chatUser
+  ){
+
     return;
+  }
+
 
   const r=
     await db
       .from('messages')
       .insert({
-        sender_id:state.user.id,
-        receiver_id:state.chatUser,
+
+        sender_id:
+          state.user.id,
+
+        receiver_id:
+          state.chatUser,
+
         content
+
       });
+
 
   if(r.error){
 
-    toast(r.error.message);
+    toast(
+      r.error.message
+    );
 
   }else{
 
     input.value='';
 
+    await createNotification({
+
+      userId:
+        state.chatUser,
+
+      title:
+        '💬 Új üzenet',
+
+      body:
+        `${state.profile.username} üzenetet küldött neked.`
+
+    });
+
+
     renderMessages();
+
   }
+
 }
 
-async function renderCommunities(){
+
+/* =========================================================
+   ÜZENET SZERKESZTÉSE
+========================================================= */
+
+async function editMessage(messageId){
 
   const {
-    data,
+    data:message,
     error
   }=await db
-    .from('communities')
+    .from('messages')
     .select('*')
-    .order('name');
+    .eq(
+      'id',
+      messageId
+    )
+    .eq(
+      'sender_id',
+      state.user.id
+    )
+    .single();
 
-  if(error)throw error;
 
-  const memberships=
+  if(error){
+
+    toast(
+      error.message
+    );
+
+    return;
+  }
+
+
+  const newContent=
+    prompt(
+      'Üzenet módosítása:',
+      message.content
+    );
+
+
+  if(newContent===null)
+    return;
+
+
+  const content=
+    newContent.trim();
+
+
+  if(!content){
+
+    toast(
+      'Az üzenet nem lehet üres.'
+    );
+
+    return;
+  }
+
+
+  const r=
     await db
-      .from('community_members')
-      .select('community_id')
+      .from('messages')
+      .update({
+
+        content,
+
+        updated_at:
+          new Date().toISOString()
+
+      })
       .eq(
-        'user_id',
+        'id',
+        messageId
+      )
+      .eq(
+        'sender_id',
         state.user.id
       );
 
-  const ids=new Set(
-    (memberships.data||[])
-      .map(x=>x.community_id)
+
+  if(r.error){
+
+    toast(
+      r.error.message
+    );
+
+    return;
+  }
+
+
+  toast(
+    'Üzenet módosítva.'
   );
 
-  $('#content').innerHTML=`
 
-    <div class="page-head">
+  renderMessages();
 
-      <h1>Közösségek</h1>
+}
 
-      <button
-        id="newCommunity"
-        class="primary"
-      >
-        + Közösség
-      </button>
 
-    </div>
+/* =========================================================
+   ÜZENET TÖRLÉSE
+========================================================= */
 
-    <div class="panel">
+async function deleteMessage(messageId){
 
-      ${
-        data?.length
+  const confirmed=
+    confirm(
+      'Biztosan törölni szeretnéd ezt az üzenetet?'
+    );
 
-        ? data.map(c=>`
 
-            <div class="community-card">
+  if(!confirmed)
+    return;
 
-              <div>
 
-                <div class="community-title">
-                  👥 ${esc(c.name)}
-                </div>
+  const r=
+    await db
+      .from('messages')
+      .delete()
+      .eq(
+        'id',
+        messageId
+      )
+      .eq(
+        'sender_id',
+        state.user.id
+      );
 
-                <div class="muted">
-                  ${esc(c.description||'')}
-                </div>
 
-              </div>
+  if(r.error){
 
-              ${
-                ids.has(c.id)
+    toast(
+      r.error.message
+    );
 
-                ? `
-                  <span class="muted">
-                    Tag vagy
-                  </span>
-                `
+    return;
+  }
 
-                : `
-                  <button
-                    class="secondary"
-                    data-join="${c.id}"
-                  >
-                    Csatlakozás
-                  </button>
-                `
-              }
 
-            </div>
-
-          `).join('')
-
-        : `
-          <div class="empty">
-            Még nincs közösség.
-          </div>
-        `
-      }
-
-    </div>
-  `;
-
-  $('#newCommunity').onclick=
-    openCommunityModal;
-
-  $$('[data-join]').forEach(
-    b=>b.onclick=async()=>{
-
-      const r=
-        await db
-          .from('community_members')
-          .insert({
-            community_id:b.dataset.join,
-            user_id:state.user.id
-          });
-
-      if(r.error)
-        toast(r.error.message);
-      else
-        renderCommunities();
-    }
+  toast(
+    'Üzenet törölve.'
   );
+
+
+  renderMessages();
+
 }
 
-function openCommunityModal(){
 
-  showModal(`
+/* =========================================================
+   KÖVETÉS
+========================================================= */
 
-    <h2>Új közösség</h2>
-
-    <div class="field">
-
-      <label>Név</label>
-
-      <input id="communityName">
-
-    </div>
-
-    <div class="field">
-
-      <label>Leírás</label>
-
-      <textarea id="communityDesc"></textarea>
-
-    </div>
-
-    <button
-      id="createCommunity"
-      class="primary"
-    >
-      Létrehozás
-    </button>
-
-    <button
-      onclick="closeModal()"
-      class="secondary"
-    >
-      Mégse
-    </button>
-
-  `);
-
-  $('#createCommunity').onclick=
-    async()=>{
-
-      const name=
-        $('#communityName')
-          .value
-          .trim();
-
-      const description=
-        $('#communityDesc')
-          .value
-          .trim();
-
-      if(!name)return;
-
-      const r=
-        await db
-          .from('communities')
-          .insert({
-            name,
-            description,
-            created_by:state.user.id
-          });
-
-      if(r.error){
-
-        toast(r.error.message);
-
-      }else{
-
-        closeModal();
-        renderCommunities();
-
-      }
-    };
-}
-
-async function renderNotifications(){
+async function toggleFollow(userId){
 
   const {
-    data,
-    error
+    data:existing
   }=await db
-    .from('notifications')
+    .from('follows')
     .select('*')
     .eq(
-      'user_id',
+      'follower_id',
       state.user.id
     )
-    .order('created_at',{
-      ascending:false
-    })
-    .limit(100);
+    .eq(
+      'following_id',
+      userId
+    )
+    .maybeSingle();
 
-  if(error)throw error;
 
-  $('#content').innerHTML=`
+  if(existing){
 
-    <div class="page-head">
-      <h1>Értesítések</h1>
-    </div>
+    const r=
+      await db
+        .from('follows')
+        .delete()
+        .eq(
+          'follower_id',
+          state.user.id
+        )
+        .eq(
+          'following_id',
+          userId
+        );
 
-    <div class="panel">
 
-      ${
-        data?.length
+    if(r.error){
 
-        ? data.map(n=>`
+      toast(
+        r.error.message
+      );
 
-            <div class="community">
+      return;
+    }
 
-              <b>
-                ${esc(
-                  n.title ||
-                  'Értesítés'
-                )}
-              </b>
 
-              <div>
-                ${esc(n.body||'')}
-              </div>
+    toast(
+      'Követés megszüntetve.'
+    );
 
-              <small class="muted">
-                ${new Date(
-                  n.created_at
-                ).toLocaleString('hu-HU')}
-              </small>
 
-            </div>
+  }else{
 
-          `).join('')
+    const r=
+      await db
+        .from('follows')
+        .insert({
 
-        : `
-          <div class="empty">
-            🔔 Nincs új értesítés.
-          </div>
-        `
-      }
+          follower_id:
+            state.user.id,
 
-    </div>
-  `;
+          following_id:
+            userId
+
+        });
+
+
+    if(r.error){
+
+      toast(
+        r.error.message
+      );
+
+      return;
+    }
+
+
+    await createNotification({
+
+      userId,
+
+      title:
+        '👤 Új követő',
+
+      body:
+        `${state.profile.username} követni kezdett.`
+
+    });
+
+
+    toast(
+      'Mostantól követed ezt a felhasználót.'
+    );
+
+  }
+
+
+  renderProfile();
+
 }
 
+
+/* =========================================================
+   PROFIL
+========================================================= */
+
 async function renderProfile(){
+
+  const profileId=
+    state.profileUserId ||
+    state.user.id;
+
 
   const {
     data:p,
@@ -1149,36 +1912,49 @@ async function renderProfile(){
   }=await db
     .from('profiles')
     .select('*')
-    .eq('id',state.user.id)
+    .eq(
+      'id',
+      profileId
+    )
     .single();
 
+
   if(error)throw error;
+
 
   const {
     count:followers
   }=await db
     .from('follows')
-    .select('*',{
-      count:'exact',
-      head:true
-    })
+    .select(
+      '*',
+      {
+        count:'exact',
+        head:true
+      }
+    )
     .eq(
       'following_id',
-      state.user.id
+      profileId
     );
+
 
   const {
     count:following
   }=await db
     .from('follows')
-    .select('*',{
-      count:'exact',
-      head:true
-    })
+    .select(
+      '*',
+      {
+        count:'exact',
+        head:true
+      }
+    )
     .eq(
       'follower_id',
-      state.user.id
+      profileId
     );
+
 
   const {
     data:posts
@@ -1187,121 +1963,300 @@ async function renderProfile(){
     .select('*')
     .eq(
       'user_id',
-      state.user.id
+      profileId
     )
-    .order('created_at',{
-      ascending:false
-    });
+    .order(
+      'created_at',
+      {
+        ascending:false
+      }
+    );
+
+
+  const ownProfile=
+    profileId===
+    state.user.id;
+
+
+  let followingThisUser=false;
+
+
+  if(!ownProfile){
+
+    const {
+      data:follow
+    }=await db
+      .from('follows')
+      .select('follower_id')
+      .eq(
+        'follower_id',
+        state.user.id
+      )
+      .eq(
+        'following_id',
+        profileId
+      )
+      .maybeSingle();
+
+
+    followingThisUser=
+      !!follow;
+
+  }
+
 
   $('#content').innerHTML=`
 
     <div class="panel">
 
+
       <div class="profile-cover"></div>
 
+
       <div class="profile-body">
+
 
         ${avatar(
           p,
           'avatar profile-avatar'
         )}
 
+
         <h1>
+
           ${esc(p.username)}
+
         </h1>
 
+
         <p class="muted">
+
           ${esc(p.bio||'')}
+
         </p>
+
 
         <div class="statbar">
 
+
           <div class="stat">
-            <b>${posts?.length||0}</b>
+
+            <b>
+              ${posts?.length||0}
+            </b>
+
             <span class="muted">
               bejegyzés
             </span>
+
           </div>
 
+
           <div class="stat">
-            <b>${followers||0}</b>
+
+            <b>
+              ${followers||0}
+            </b>
+
             <span class="muted">
               követő
             </span>
+
           </div>
 
+
           <div class="stat">
-            <b>${following||0}</b>
+
+            <b>
+              ${following||0}
+            </b>
+
             <span class="muted">
               követés
             </span>
+
           </div>
+
 
         </div>
 
-        <button
-          id="editProfile"
-          class="secondary"
-        >
-          Profil szerkesztése
-        </button>
+
+        ${
+          ownProfile
+
+          ? `
+
+            <button
+              id="editProfile"
+              class="secondary"
+            >
+
+              Profil szerkesztése
+
+            </button>
+
+          `
+
+          : `
+
+            <div class="actions">
+
+
+              <button
+                id="profileMessage"
+                class="primary"
+              >
+
+                💬 Üzenet
+
+              </button>
+
+
+              <button
+                id="profileFollow"
+                class="secondary"
+              >
+
+                ${
+                  followingThisUser
+                  ? '✓ Követed'
+                  : 'Követés'
+                }
+
+              </button>
+
+
+            </div>
+
+          `
+        }
+
 
       </div>
 
+
     </div>
+
 
     <div class="panel">
 
+
       <h3>
-        Saját bejegyzéseid
+        Bejegyzések
       </h3>
+
 
       ${
         posts?.length
 
-        ? posts.map(p=>`
+        ? posts.map(post=>`
 
             <div class="comment">
 
-              ${esc(p.content)}
+              ${esc(
+                post.content||''
+              )}
+
+              ${
+                post.media_url
+                ? `
+
+                  <br>
+
+                  <img
+                    class="post-media"
+                    src="${esc(post.media_url)}"
+                    alt="Bejegyzés képe"
+                  >
+
+                `
+                :''
+              }
+
 
               <br>
 
+
               <small>
+
                 ${new Date(
-                  p.created_at
-                ).toLocaleString('hu-HU')}
+                  post.created_at
+                ).toLocaleString(
+                  'hu-HU'
+                )}
+
               </small>
+
 
             </div>
 
           `).join('')
 
+
         : `
+
           <div class="empty">
-            Még nincs saját bejegyzésed.
+
+            Még nincs bejegyzése.
+
           </div>
+
         `
       }
 
+
     </div>
+
   `;
 
-  $('#editProfile').onclick=
-    ()=>openProfileModal(p);
+
+  if(ownProfile){
+
+    $('#editProfile').onclick=
+      ()=>openProfileModal(p);
+
+  }else{
+
+    $('#profileMessage').onclick=()=>{
+
+      state.chatUser=
+        profileId;
+
+      state.view=
+        'messages';
+
+      nav();
+
+    };
+
+
+    $('#profileFollow').onclick=
+      ()=>toggleFollow(profileId);
+
+  }
+
 }
+
+
+/* =========================================================
+   PROFIL SZERKESZTÉS
+========================================================= */
 
 function openProfileModal(p){
 
   showModal(`
 
-    <h2>Profil szerkesztése</h2>
+    <h2>
+      Profil szerkesztése
+    </h2>
+
 
     <div class="field">
 
       <label>
         Felhasználónév
       </label>
+
 
       <input
         id="editUsername"
@@ -1310,23 +2265,27 @@ function openProfileModal(p){
 
     </div>
 
+
     <div class="field">
 
       <label>
         Bemutatkozás
       </label>
 
-      <textarea id="editBio">
-        ${esc(p.bio||'')}
-      </textarea>
+
+      <textarea
+        id="editBio"
+      >${esc(p.bio||'')}</textarea>
 
     </div>
+
 
     <div class="field">
 
       <label>
         Profilkép
       </label>
+
 
       <input
         id="editAvatar"
@@ -1336,30 +2295,40 @@ function openProfileModal(p){
 
     </div>
 
+
     <button
       id="saveProfile"
       class="primary"
     >
+
       Mentés
+
     </button>
+
 
     <button
       onclick="closeModal()"
       class="secondary"
     >
+
       Mégse
+
     </button>
 
   `);
 
+
   $('#saveProfile').onclick=
     async()=>{
 
-      let avatar_url=p.avatar_url;
+      let avatar_url=
+        p.avatar_url;
+
 
       const file=
         $('#editAvatar')
           .files[0];
+
 
       if(file){
 
@@ -1367,6 +2336,7 @@ function openProfileModal(p){
           `${state.user.id}/`+
           `avatar-${crypto.randomUUID()}.`+
           `${file.name.split('.').pop()}`;
+
 
         const up=
           await db.storage
@@ -1380,12 +2350,16 @@ function openProfileModal(p){
               }
             );
 
+
         if(up.error){
 
-          toast(up.error.message);
+          toast(
+            up.error.message
+          );
 
           return;
         }
+
 
         avatar_url=
           db.storage
@@ -1393,32 +2367,53 @@ function openProfileModal(p){
             .getPublicUrl(path)
             .data
             .publicUrl;
+
       }
+
+
+      const username=
+        $('#editUsername')
+          .value
+          .trim();
+
+
+      const bio=
+        $('#editBio')
+          .value
+          .trim();
+
+
+      if(!username){
+
+        toast(
+          'A felhasználónév nem lehet üres.'
+        );
+
+        return;
+      }
+
 
       const r=
         await db
           .from('profiles')
           .update({
-            username:
-              $('#editUsername')
-                .value
-                .trim(),
 
-            bio:
-              $('#editBio')
-                .value
-                .trim(),
-
+            username,
+            bio,
             avatar_url
+
           })
           .eq(
             'id',
             state.user.id
           );
 
+
       if(r.error){
 
-        toast(r.error.message);
+        toast(
+          r.error.message
+        );
 
       }else{
 
@@ -1427,183 +2422,798 @@ function openProfileModal(p){
         closeModal();
 
         renderProfile();
+
       }
+
     };
+
 }
+
+
+/* =========================================================
+   KÖZÖSSÉGEK
+========================================================= */
+
+async function renderCommunities(){
+
+  const {
+    data,
+    error
+  }=await db
+    .from('communities')
+    .select('*')
+    .order('name');
+
+
+  if(error)throw error;
+
+
+  const memberships=
+    await db
+      .from('community_members')
+      .select(
+        'community_id'
+      )
+      .eq(
+        'user_id',
+        state.user.id
+      );
+
+
+  const ids=
+    new Set(
+      (memberships.data||[])
+        .map(
+          x=>x.community_id
+        )
+    );
+
+
+  $('#content').innerHTML=`
+
+    <div class="page-head">
+
+
+      <h1>
+        Közösségek
+      </h1>
+
+
+      <button
+        id="newCommunity"
+        class="primary"
+      >
+
+        + Közösség
+
+      </button>
+
+
+    </div>
+
+
+    <div class="panel">
+
+
+      ${
+        data?.length
+
+        ? data.map(c=>`
+
+            <div class="community-card">
+
+
+              <div>
+
+                <div class="community-title">
+
+                  👥 ${esc(c.name)}
+
+                </div>
+
+
+                <div class="muted">
+
+                  ${esc(
+                    c.description||''
+                  )}
+
+                </div>
+
+              </div>
+
+
+              ${
+                ids.has(c.id)
+
+                ? `
+
+                  <span class="muted">
+
+                    Tag vagy
+
+                  </span>
+
+                `
+
+                : `
+
+                  <button
+                    class="secondary"
+                    data-join="${c.id}"
+                  >
+
+                    Csatlakozás
+
+                  </button>
+
+                `
+              }
+
+
+            </div>
+
+          `).join('')
+
+
+        : `
+
+          <div class="empty">
+
+            Még nincs közösség.
+
+          </div>
+
+        `
+      }
+
+
+    </div>
+
+  `;
+
+
+  $('#newCommunity').onclick=
+    openCommunityModal;
+
+
+  $$('[data-join]').forEach(
+    b=>b.onclick=async()=>{
+
+      const r=
+        await db
+          .from('community_members')
+          .insert({
+
+            community_id:
+              b.dataset.join,
+
+            user_id:
+              state.user.id
+
+          });
+
+
+      if(r.error){
+
+        toast(
+          r.error.message
+        );
+
+      }else{
+
+        renderCommunities();
+
+      }
+
+    }
+  );
+
+}
+
+
+function openCommunityModal(){
+
+  showModal(`
+
+    <h2>
+      Új közösség
+    </h2>
+
+
+    <div class="field">
+
+      <label>
+        Név
+      </label>
+
+
+      <input
+        id="communityName"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Leírás
+      </label>
+
+
+      <textarea
+        id="communityDesc"
+      ></textarea>
+
+    </div>
+
+
+    <button
+      id="createCommunity"
+      class="primary"
+    >
+
+      Létrehozás
+
+    </button>
+
+
+    <button
+      onclick="closeModal()"
+      class="secondary"
+    >
+
+      Mégse
+
+    </button>
+
+  `);
+
+
+  $('#createCommunity').onclick=
+    async()=>{
+
+      const name=
+        $('#communityName')
+          .value
+          .trim();
+
+
+      const description=
+        $('#communityDesc')
+          .value
+          .trim();
+
+
+      if(!name)return;
+
+
+      const r=
+        await db
+          .from('communities')
+          .insert({
+
+            name,
+            description,
+
+            created_by:
+              state.user.id
+
+          });
+
+
+      if(r.error){
+
+        toast(
+          r.error.message
+        );
+
+      }else{
+
+        closeModal();
+
+        renderCommunities();
+
+      }
+
+    };
+
+}
+
+
+/* =========================================================
+   ÉRTESÍTÉSEK OLDAL
+========================================================= */
+
+async function renderNotifications(){
+
+  const {
+    data,
+    error
+  }=await db
+    .from('notifications')
+    .select('*')
+    .eq(
+      'user_id',
+      state.user.id
+    )
+    .order(
+      'created_at',
+      {
+        ascending:false
+      }
+    )
+    .limit(100);
+
+
+  if(error)throw error;
+
+
+  $('#content').innerHTML=`
+
+    <div class="page-head">
+
+      <h1>
+        Értesítések
+      </h1>
+
+    </div>
+
+
+    <div class="panel">
+
+
+      ${
+        data?.length
+
+        ? data.map(n=>`
+
+            <div class="community">
+
+
+              <b>
+
+                ${esc(
+                  n.title ||
+                  'Értesítés'
+                )}
+
+              </b>
+
+
+              <div>
+
+                ${esc(
+                  n.body||''
+                )}
+
+              </div>
+
+
+              <small class="muted">
+
+                ${new Date(
+                  n.created_at
+                ).toLocaleString(
+                  'hu-HU'
+                )}
+
+              </small>
+
+
+            </div>
+
+          `).join('')
+
+
+        : `
+
+          <div class="empty">
+
+            🔔 Nincs új értesítés.
+
+          </div>
+
+        `
+      }
+
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   BEÁLLÍTÁSOK
+========================================================= */
 
 function renderSettings(){
 
   $('#content').innerHTML=`
 
     <div class="page-head">
-      <h1>Beállítások</h1>
+
+      <h1>
+        Beállítások
+      </h1>
+
     </div>
+
 
     <div class="panel">
 
-      <h3>Fiók</h3>
+      <h3>
+        Fiók
+      </h3>
+
 
       <p class="muted">
-        ${esc(state.user.email)}
+
+        ${esc(
+          state.user.email
+        )}
+
       </p>
+
 
       <button
         id="settingsLogout"
         class="danger"
       >
+
         Kijelentkezés
+
       </button>
 
     </div>
 
+
     <div class="panel">
 
-      <h3>Adatvédelem</h3>
+      <h3>
+        Adatvédelem
+      </h3>
+
 
       <p class="muted">
+
         A valódi adatokat a Supabase RLS
         szabályai védik. Titkos service_role
         kulcs nem kerül a böngészőbe.
+
       </p>
 
     </div>
+
   `;
+
 
   $('#settingsLogout').onclick=
     ()=>$('#logoutBtn').click();
+
 }
+
+
+/* =========================================================
+   MODAL
+========================================================= */
 
 function showModal(html){
 
   $('#modal').innerHTML=`
+
     <div class="modal-card">
+
       ${html}
+
     </div>
+
   `;
 
-  $('#modal').classList.remove('hidden');
+
+  $('#modal').classList.remove(
+    'hidden'
+  );
+
 }
+
 
 function closeModal(){
 
-  $('#modal').classList.add('hidden');
+  $('#modal').classList.add(
+    'hidden'
+  );
 
   $('#modal').innerHTML='';
+
 }
 
-window.closeModal=closeModal;
+
+window.closeModal=
+  closeModal;
+
+
+/* =========================================================
+   REALTIME
+========================================================= */
 
 async function subscribe(){
 
-  // Ha már van aktív Messa Realtime csatorna,
-  // ne hozzunk létre még egyet.
-  const existing = state.subscriptions.find(
-    channel => channel.topic === 'realtime:messa-realtime'
-  );
+  if(
+    state.realtimeStarted
+  ){
 
-  if(existing){
-    console.log('Messa Realtime: már csatlakozva');
+    console.log(
+      'Messa Realtime: már elindult.'
+    );
+
     return;
   }
 
-  // Először létrehozzuk a csatornát.
-  const channel = db.channel('messa-realtime');
 
-  // ÜZENETEK REALTIME
-  channel.on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-      filter: `receiver_id=eq.${state.user.id}`
-    },
-    payload => {
-
-      console.log(
-        'Messa Realtime - új üzenet:',
-        payload
-      );
-
-      if(
-        state.view === 'messages' &&
-        state.chatUser
-      ){
-        renderMessages();
-      }
-
-    }
-  );
-
-  // BEJEGYZÉSEK REALTIME
-  channel.on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'posts'
-    },
-    payload => {
-
-      console.log(
-        'Messa Realtime - bejegyzés változás:',
-        payload
-      );
-
-      if(state.view === 'home'){
-        renderHome();
-      }
-
-    }
-  );
-
-  // FONTOS:
-  // Az összes .on() callback hozzáadása után
-  // hívjuk meg csak a subscribe()-ot.
-  const status = await channel.subscribe();
-
-  if(status === 'SUBSCRIBED'){
-
-    state.subscriptions.push(channel);
-
-    console.log(
-      'Messa Realtime: sikeresen csatlakozva'
-    );
-
-  }else{
+  if(!state.user){
 
     console.error(
-      'Messa Realtime csatlakozási hiba:',
-      status
+      'Messa Realtime: nincs bejelentkezett felhasználó.'
     );
 
+    return;
   }
+
+
+  state.realtimeStarted=true;
+
+
+  const channel=
+    db.channel(
+      `messa-realtime-${state.user.id}`
+    );
+
+
+  /* =========================
+     ÜZENETEK
+  ========================= */
+
+  channel.on(
+    'postgres_changes',
+    {
+      event:'*',
+      schema:'public',
+      table:'messages',
+      filter:
+        `receiver_id=eq.${state.user.id}`
+    },
+    payload=>{
+
+      console.log(
+        'Messa Realtime - üzenet:',
+        payload
+      );
+
+
+      if(
+        state.view==='messages' &&
+        state.chatUser
+      ){
+
+        renderMessages();
+
+      }
+
+    }
+  );
+
+
+  /* =========================
+     SAJÁT ÜZENETEK VÁLTOZÁSA
+  ========================= */
+
+  channel.on(
+    'postgres_changes',
+    {
+      event:'*',
+      schema:'public',
+      table:'messages',
+      filter:
+        `sender_id=eq.${state.user.id}`
+    },
+    payload=>{
+
+      console.log(
+        'Messa Realtime - saját üzenet:',
+        payload
+      );
+
+
+      if(
+        state.view==='messages' &&
+        state.chatUser
+      ){
+
+        renderMessages();
+
+      }
+
+    }
+  );
+
+
+  /* =========================
+     BEJEGYZÉSEK
+  ========================= */
+
+  channel.on(
+    'postgres_changes',
+    {
+      event:'*',
+      schema:'public',
+      table:'posts'
+    },
+    payload=>{
+
+      console.log(
+        'Messa Realtime - bejegyzés:',
+        payload
+      );
+
+
+      if(
+        state.view==='home'
+      ){
+
+        renderHome();
+
+      }
+
+    }
+  );
+
+
+  /* =========================
+     ÉRTESÍTÉSEK
+  ========================= */
+
+  channel.on(
+    'postgres_changes',
+    {
+      event:'INSERT',
+      schema:'public',
+      table:'notifications',
+      filter:
+        `user_id=eq.${state.user.id}`
+    },
+    payload=>{
+
+      console.log(
+        'Messa Realtime - értesítés:',
+        payload
+      );
+
+
+      toast(
+        payload.new?.title ||
+        '🔔 Új értesítés'
+      );
+
+
+      if(
+        state.view==='notifications'
+      ){
+
+        renderNotifications();
+
+      }
+
+    }
+  );
+
+
+  /* =========================
+     CSATLAKOZÁS
+  ========================= */
+
+  channel.subscribe(
+    status=>{
+
+      console.log(
+        'Messa Realtime státusz:',
+        status
+      );
+
+
+      if(status==='SUBSCRIBED'){
+
+        state.subscriptions.push(
+          channel
+        );
+
+
+        console.log(
+          'Messa Realtime: sikeresen csatlakozva'
+        );
+
+      }
+
+
+      if(
+        status==='CHANNEL_ERROR' ||
+        status==='TIMED_OUT' ||
+        status==='CLOSED'
+      ){
+
+        console.error(
+          'Messa Realtime hiba:',
+          status
+        );
+
+      }
+
+    }
+  );
+
 }
+
+
+/* =========================================================
+   BOOT
+========================================================= */
 
 async function boot(session){
 
-  state.user=session.user;
+  state.user=
+    session.user;
 
-  $('#authView').classList.add('hidden');
-  $('#appView').classList.remove('hidden');
+
+  state.profileUserId=
+    state.user.id;
+
+
+  $('#authView')
+    .classList
+    .add('hidden');
+
+
+  $('#appView')
+    .classList
+    .remove('hidden');
+
 
   try{
 
     await loadProfile();
 
+
+    state.realtimeStarted=false;
+
+
     await subscribe();
+
 
     state.view='home';
 
+
     nav();
+
 
   }catch(e){
 
     console.error(e);
 
-    toast(e.message);
+    toast(
+      e.message
+    );
+
   }
+
 }
+
+
+/* =========================================================
+   AUTH SESSION
+========================================================= */
 
 (async()=>{
 
@@ -1611,36 +3221,64 @@ async function boot(session){
     data
   }=await db.auth.getSession();
 
-  if(data.session)
-    await boot(data.session);
+
+  if(data.session){
+
+    await boot(
+      data.session
+    );
+
+  }
+
 
   db.auth.onAuthStateChange(
-    async(event,session)=>{
+    async(
+      event,
+      session
+    )=>{
 
       if(
         session &&
         !state.user
-      )
-        await boot(session);
+      ){
+
+        await boot(
+          session
+        );
+
+      }
+
 
       if(!session){
 
         state.user=null;
+
         state.profile=null;
+
+        state.chatUser=null;
+
+        state.profileUserId=null;
+
+        state.realtimeStarted=false;
+
 
         state.subscriptions.forEach(
           s=>db.removeChannel(s)
         );
 
+
         state.subscriptions=[];
+
 
         $('#appView')
           .classList
           .add('hidden');
 
+
         $('#authView')
           .classList
           .remove('hidden');
+
       }
 
     }
@@ -1649,24 +3287,31 @@ async function boot(session){
 })();
 
 
-// Messa PWA:
-// Service Worker regisztráció
-// az oldal betöltése után.
+/* =========================================================
+   PWA
+========================================================= */
 
-if('serviceWorker' in navigator){
+if(
+  'serviceWorker' in navigator
+){
 
   window.addEventListener(
     'load',
     ()=>{
+
       navigator.serviceWorker
         .register('./sw.js')
         .catch(error=>{
+
           console.error(
             'Messa service worker registration failed:',
             error
           );
+
         });
+
     }
   );
 
 }
+```
